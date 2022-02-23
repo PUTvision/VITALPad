@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="a6f79196-fcd7-423e-a039-a51bf6af6476" name="GLaDOS">
+        <fileTransfer accessType="SFTP" host="GLaDOS" port="22" sshConfigId="1a1421a9-937b-43de-819e-9b60e8f174bf" sshConfig="rivi@GLaDOS:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

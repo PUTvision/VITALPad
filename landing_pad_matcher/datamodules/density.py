@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple, List
 
 from pytorch_lightning import LightningDataModule
 from sklearn.model_selection import train_test_split
@@ -20,12 +20,24 @@ class DensityDataModule(LightningDataModule):
         self.train_dataset = None
         self.val_dataset = None
 
-    def setup(self, stage: Optional[str] = None):
-        file_ids = sorted([path.stem.split('_')[1] for path in (self._data_path / 'rgb').iterdir()])
-        train_file_ids, val_file_ids = train_test_split(file_ids, test_size=0.15, random_state=42)
+    @staticmethod
+    def get_paths(data_path: Path) -> List[Tuple[Path, Path]]:
+        paths = []
+        for data_dir in data_path.iterdir():
+            rgb_paths = sorted((data_dir / 'rgb').iterdir())
+            seg_paths = sorted((data_dir / 'seg').iterdir())
+            assert len(rgb_paths) == len(seg_paths)
 
-        self.train_dataset = DensityDataset(self._data_path, train_file_ids, augment=True)
-        self.val_dataset = DensityDataset(self._data_path, val_file_ids, augment=False)
+            paths.extend(zip(rgb_paths, seg_paths))
+
+        return paths
+
+    def setup(self, stage: Optional[str] = None):
+        paths = self.get_paths(self._data_path)
+        train_paths, val_paths = train_test_split(paths, test_size=0.15, random_state=42)
+
+        self.train_dataset = DensityDataset(train_paths, augment=True)
+        self.val_dataset = DensityDataset(val_paths, augment=False)
 
     def train_dataloader(self):
         return DataLoader(

@@ -7,25 +7,26 @@ import torch.utils
 import torch.utils.data
 from albumentations import Compose, Affine
 from albumentations.augmentations.transforms import (
-    ToFloat, Flip, RandomShadow, MotionBlur, ColorJitter, RandomGamma
+    ToFloat, Flip, RandomShadow, MotionBlur, ColorJitter, RandomGamma, RandomSunFlare, ISONoise
 )
 from albumentations.pytorch import ToTensorV2
 from scipy.ndimage import gaussian_filter
 
 
 class DensityDataset(torch.utils.data.Dataset):
-    def __init__(self, data_path: Path, allowed_file_ids: List[str], augment: bool = False):
-        self._data_path = data_path
-        self._allowed_file_ids = allowed_file_ids
+    def __init__(self, paths: List[Tuple[Path, Path]], augment: bool = False):
+        self._paths = paths
         self._augment = augment
 
         self._augmentations = Compose([
             RandomGamma(gamma_limit=(80, 120)),
             ColorJitter(brightness=0.2, contrast=0.2, hue=0.1, saturation=0.5),
+            RandomSunFlare(),
             RandomShadow(num_shadows_upper=5),
+            ISONoise(),
             MotionBlur(),
             Flip(),
-            Affine(rotate=(-10, 10)),
+            Affine(rotate=(-10, 10), scale=(0.9, 1.1)),
             ToFloat(max_value=255.0),
             ToTensorV2()
         ])
@@ -42,7 +43,7 @@ class DensityDataset(torch.utils.data.Dataset):
         return image, gt
 
     def __len__(self) -> int:
-        return len(self._allowed_file_ids)
+        return len(self._paths)
 
     def _perform_augmentations(self, rgb: np.ndarray, gt: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
         if self._augment:
@@ -53,6 +54,7 @@ class DensityDataset(torch.utils.data.Dataset):
         return transformed['image'], transformed['mask']
 
     @staticmethod
+    @torch.no_grad()
     def _transform_gt(original_gt: torch.Tensor) -> torch.Tensor:
         # The aim of the code below is to produce softmax-like output
         gt = torch.ones(3, *original_gt.shape[:2], dtype=torch.float32)
@@ -72,9 +74,7 @@ class DensityDataset(torch.utils.data.Dataset):
         return gt
 
     def _load_data(self, index: int) -> Tuple[np.ndarray, np.ndarray]:
-        file_id = self._allowed_file_ids[index]
-        rgb_path = self._data_path / 'rgb' / f'rgb_{file_id}.png'
-        gt_path = self._data_path / 'seg' / f'segmentation_{file_id}.png'
+        rgb_path, gt_path = self._paths[index]
         rgb_image = cv2.cvtColor(cv2.imread(str(rgb_path)), cv2.COLOR_BGR2RGB)
         gt_image = cv2.cvtColor(cv2.imread(str(gt_path)), cv2.COLOR_BGR2RGB)
 

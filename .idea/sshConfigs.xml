@@ -3,6 +3,7 @@
   <component name="SshConfigs">
     <configs>
       <sshConfig authType="OPEN_SSH" host="GLaDOS" id="1a1421a9-937b-43de-819e-9b60e8f174bf" port="22" nameFormat="DESCRIPTIVE" username="rivi" useOpenSSHConfig="true" />
+      <sshConfig authType="OPEN_SSH" host="Archos" id="79c6f1e7-dc81-48e0-846f-fa6cf3a41534" port="22" nameFormat="DESCRIPTIVE" username="rivi" useOpenSSHConfig="true" />
     </configs>
   </component>
 </project>

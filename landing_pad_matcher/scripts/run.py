@@ -10,7 +10,7 @@ from landing_pad_matcher.models.landmarks_regressor import LandmarksRegressor
 
 torch.set_grad_enabled(False)
 
-model = LandmarksRegressor.load_from_checkpoint('model.ckpt')
+model = LandmarksRegressor.load_from_checkpoint('keypoints_detector.ckpt')
 model.eval()
 dataset = LandmarksDataset(image_path=Path('../data/pad_128.png'), num_samples=100)
 

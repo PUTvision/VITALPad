@@ -1,4 +1,3 @@
-import time
 from pathlib import Path
 
 import cv2
@@ -6,17 +5,17 @@ import numpy as np
 import torch
 from skimage.measure import label, regionprops
 
+from landing_pad_matcher.datamodules.density import DensityDataModule
 from landing_pad_matcher.datasets.density import DensityDataset
 from landing_pad_matcher.models.density_estimator import DensityEstimator
 
 torch.set_grad_enabled(False)
 
-estimator = DensityEstimator.load_from_checkpoint('/home/rivi/Downloads/estimator.ckpt', strict=False)
-estimator.eval()
+estimator = DensityEstimator.load_from_checkpoint('/home/rivi/Downloads/density_model.ckpt').eval()
+print(estimator)
 
 data_path = Path('/home/rivi/Datasets/Landing')
-file_ids = sorted([path.stem.split('_')[1] for path in (data_path / 'rgb').iterdir()])
-dataset = DensityDataset(data_path=data_path, allowed_file_ids=file_ids)
+dataset = DensityDataset(paths=DensityDataModule.get_paths(data_path))
 
 for i in range(len(dataset)):
     image, gt = dataset[i]
@@ -41,8 +40,6 @@ for i in range(len(dataset)):
 
         pad_image = image[biggest_blob.slice]
         cv2.imshow('pad image', pad_image)
-
-    end = time.perf_counter()
 
     cv2.imshow('image', image)
     cv2.imshow('people', people)

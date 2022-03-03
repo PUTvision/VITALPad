@@ -1,7 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="GLaDOS" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" autoUpload="Always" serverName="Archos" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
+      <paths name="Archos">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/rivi/Repositories/LandingPadMatcher" local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
       <paths name="GLaDOS">
         <serverdata>
           <mappings>

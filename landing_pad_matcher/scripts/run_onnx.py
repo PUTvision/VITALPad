@@ -5,7 +5,7 @@ import onnxruntime
 
 options = onnxruntime.SessionOptions()
 options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-session = onnxruntime.InferenceSession('model.onnx', options)
+session = onnxruntime.InferenceSession('keypoints_detector.onnx', options)
 
 inputs = np.random.rand(1, 3, 128, 128).astype(np.float32)
 

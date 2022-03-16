@@ -22,7 +22,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
             ColorJitter(brightness=0.2, contrast=0.2, hue=0.1, saturation=0.5),
             Affine(rotate=(-180, 180), translate_px=(-20, 20), scale=(0.7, 1.1), shear=(0.7, 1.3),
                    cval=(112, 112, 112), p=1.0),
-            Perspective(pad_val=(112, 112, 112)),
+            Perspective(scale=(0.01, 0.05), pad_val=(112, 112, 112)),
             RandomShadow(),
             MotionBlur(),
             ISONoise(),
@@ -44,8 +44,8 @@ class LandmarksDataset(torch.utils.data.Dataset):
         image = transformed['image']
         keypoints = transformed['keypoints']
 
-        targets = torch.zeros(7)
-        if len(keypoints) == 3:
+        targets = torch.zeros(9)
+        if len(keypoints) == 4:
             targets[0] = 1
             targets[1:] = torch.tensor(keypoints).flatten() / 128
 
@@ -55,6 +55,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
         image = cv2.imread(str(self._image_path))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         keypoints = np.array([
+            [63.5, 63.5],
             [63.5, 15],
             [106, 87],
             [21, 87]

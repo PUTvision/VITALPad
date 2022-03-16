@@ -58,6 +58,8 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
         gpus=-1,
         strategy=DDPPlugin(
             find_unused_parameters=False,
+            gradient_as_bucket_view=True,
+            static_graph=True
         ),
         sync_batchnorm=True,
         precision=32,

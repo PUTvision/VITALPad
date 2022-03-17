@@ -16,6 +16,13 @@
           </advancedOptions>
         </fileTransfer>
       </webServer>
+      <webServer id="6d75fa22-2068-4936-b36e-529464e8abda" name="Jetson">
+        <fileTransfer accessType="SFTP" host="Jetson" port="22" sshConfigId="fd8a8a88-6320-4ab3-9ab2-de291b8e4bee" sshConfig="put@Jetson:22 agent" authAgent="true">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
     </option>
   </component>
 </project>

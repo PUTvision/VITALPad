@@ -30,15 +30,16 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)
     early_stop_callback = EarlyStopping(monitor='train_loss', patience=50)
     model_summary_callback = ModelSummary(max_depth=-1)
-    quantization_callback = QuantizationAwareTraining(qconfig='qnnpack')
     logger = pl.loggers.NeptuneLogger(project='Vision/LandingDensityEstimation')
 
     trainer = pl.Trainer(
         logger=logger,
-        callbacks=[model_summary_callback, checkpoint_callback, early_stop_callback, quantization_callback],
+        callbacks=[model_summary_callback, checkpoint_callback, early_stop_callback],
         gpus=-1,
         strategy=DDPPlugin(
             find_unused_parameters=False,
+            gradient_as_bucket_view=True,
+            static_graph=True
         ),
         sync_batchnorm=True,
         precision=16,

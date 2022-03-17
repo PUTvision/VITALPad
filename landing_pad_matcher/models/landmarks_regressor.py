@@ -56,7 +56,7 @@ class LandmarksRegressor(pl.LightningModule):
         #     nn.Conv2d(in_channels=320, out_channels=8, kernel_size=(1, 1)),
         #     nn.Flatten()
         # )
-        self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=10)
+        self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=10, act_layer=nn.ReLU)
 
         self.loss = nn.GaussianNLLLoss(reduction='none')
 

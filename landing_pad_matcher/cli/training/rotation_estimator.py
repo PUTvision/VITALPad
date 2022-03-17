@@ -5,11 +5,11 @@ from typing import Optional
 import click
 import pytorch_lightning as pl
 import pytorch_lightning.loggers
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, ModelSummary, QuantizationAwareTraining
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, ModelSummary
 from pytorch_lightning.plugins import DDPPlugin
 
-from landing_pad_matcher.datamodules.landmarks import LandmarksDataModule
-from landing_pad_matcher.models.landmarks_regressor import LandmarksRegressor
+from landing_pad_matcher.datamodules.rotation import RotationDataModule
+from landing_pad_matcher.models.rotation_estimator import RotationEstimator
 
 
 @click.command()
@@ -23,31 +23,9 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
           epochs: int, lr: float, number_of_workers: Optional[int]):
     pl.seed_everything(42)
 
-    data_module = LandmarksDataModule(data_path, batch_size, validation_batch_size, number_of_workers)
+    data_module = RotationDataModule(data_path, batch_size, validation_batch_size, number_of_workers)
 
-    model = LandmarksRegressor(lr=lr)
-
-    # blocks_residuals = [1, 2, 2, 2, 4, 2]
-    # fusable = [('network.conv_stem', 'network.bn1', 'network.act1'),
-    #            ('network.conv_head', 'network.act2')]
-    # for block in range(6):
-    #     for residual in range(blocks_residuals[block]):
-    #         fusable.append((f'network.blocks.{block}.{residual}.conv_dw',
-    #                         f'network.blocks.{block}.{residual}.bn1',
-    #                         f'network.blocks.{block}.{residual}.act1'))
-    #         fusable.append((f'network.blocks.{block}.{residual}.conv_pw',
-    #                         f'network.blocks.{block}.{residual}.bn2',
-    #                         f'network.blocks.{block}.{residual}.act2'))
-    #         if block == 5:
-    #             fusable.append((f'network.blocks.{block}.{residual}.se.conv_reduce',
-    #                             f'network.blocks.{block}.{residual}.se.act1',
-    #                             f'network.blocks.{block}.{residual}.se.conv_expand',
-    #                             f'network.blocks.{block}.{residual}.se.gate'))
-
-    # training_fusable = [('network.conv_head', 'network.act2')]
-    # for residual in range(blocks_residuals[5]):
-    #     training_fusable.append((f'network.blocks.5.{residual}.se.conv_reduce',
-    #                              f'network.blocks.5.{residual}.se.act1'))
+    model = RotationEstimator(lr=lr)
 
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)
     early_stop_callback = EarlyStopping(monitor='train_loss', patience=50)

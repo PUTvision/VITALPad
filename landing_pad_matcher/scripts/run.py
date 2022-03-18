@@ -24,25 +24,27 @@ for i in range(len(dataset)):
     preds = preds_.tolist()
 
     gt_image = image.permute(1, 2, 0).numpy()[..., ::-1].copy()
-    cv2.circle(gt_image, (round(gt[1] * 128), round(gt[2] * 128)), radius=5, color=(0, 0, 255))
-    cv2.circle(gt_image, (round(gt[3] * 128), round(gt[4] * 128)), radius=5, color=(0, 255, 0))
-    cv2.circle(gt_image, (round(gt[5] * 128), round(gt[6] * 128)), radius=5, color=(255, 0, 0))
-    cv2.circle(gt_image, (round(gt[7] * 128), round(gt[8] * 128)), radius=5, color=(255, 255, 0))
+    cv2.circle(gt_image, (round(gt[2] * 128), round(gt[3] * 128)), radius=5, color=(0, 0, 255))
+    cv2.circle(gt_image, (round(gt[4] * 128), round(gt[5] * 128)), radius=5, color=(0, 255, 0))
+    cv2.circle(gt_image, (round(gt[6] * 128), round(gt[7] * 128)), radius=5, color=(255, 0, 0))
+    cv2.circle(gt_image, (round(gt[8] * 128), round(gt[9] * 128)), radius=5, color=(255, 255, 0))
 
     preds_image = image.permute(1, 2, 0).numpy()[..., ::-1].copy()
-    cv2.circle(preds_image, (round(preds[2] * 128), round(preds[3] * 128)), radius=5, color=(0, 0, 255))
-    cv2.circle(preds_image, (round(preds[4] * 128), round(preds[5] * 128)), radius=5, color=(0, 255, 0))
-    cv2.circle(preds_image, (round(preds[6] * 128), round(preds[7] * 128)), radius=5, color=(255, 0, 0))
-    cv2.circle(preds_image, (round(preds[8] * 128), round(preds[9] * 128)), radius=5, color=(255, 255, 0))
+    cv2.circle(preds_image, (round(preds[4] * 128), round(preds[5] * 128)), radius=5, color=(0, 0, 255))
+    cv2.circle(preds_image, (round(preds[6] * 128), round(preds[7] * 128)), radius=5, color=(0, 255, 0))
+    cv2.circle(preds_image, (round(preds[8] * 128), round(preds[9] * 128)), radius=5, color=(255, 0, 0))
+    cv2.circle(preds_image, (round(preds[10] * 128), round(preds[11] * 128)), radius=5, color=(255, 255, 0))
 
-    std = nn.functional.softplus(preds_[1]).item()
-    mae = torch.mean(torch.absolute(preds_[2:] - gt_[1:])).item()
+    std = nn.functional.softplus(preds_[2]).item()
+    mae = torch.mean(torch.absolute(preds_[4:] - gt_[2:])).item()
 
     if gt[0]:
         stds.append(std)
         maes.append(mae / 100)
 
-    print(torch.sigmoid(preds_[0]), std)
+    print(f'Estimated rotation: {torch.rad2deg_(preds_[0]).item()}; std: {nn.functional.softplus(preds_[1]).item()}')
+    print(f'Real rotation: {torch.rad2deg_(gt_[0]).item()}')
+    print(torch.sigmoid(preds_[2]), std)
 
     cv2.imshow('gt', gt_image)
     cv2.imshow('pred', preds_image)

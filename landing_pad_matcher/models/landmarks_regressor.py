@@ -56,14 +56,25 @@ class LandmarksRegressor(pl.LightningModule):
         #     nn.Conv2d(in_channels=320, out_channels=8, kernel_size=(1, 1)),
         #     nn.Flatten()
         # )
-        self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=10, act_layer=nn.ReLU)
+        self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=12, act_layer=nn.ReLU)
+        # Outputs:
+        # 0: angle
+        # 1: angle std
+        # 2: is object
+        # 3: keypoints std
+        # 4-11: keypoints
 
         self.loss = nn.GaussianNLLLoss(reduction='none')
+        self.angle_loss = nn.GaussianNLLLoss()
 
         classification_metrics = MetricCollection([
             torchmetrics.Accuracy(),
         ])
         regression_metrics = MetricCollection([
+            torchmetrics.MeanAbsoluteError(),
+            torchmetrics.MeanSquaredError()
+        ])
+        angle_metrics = MetricCollection([
             torchmetrics.MeanAbsoluteError(),
             torchmetrics.MeanSquaredError()
         ])
@@ -74,6 +85,9 @@ class LandmarksRegressor(pl.LightningModule):
         self.train_regression_metrics = regression_metrics.clone('train_')
         self.valid_regression_metrics = regression_metrics.clone('val_')
         self.test_regression_metrics = regression_metrics.clone('test_')
+        self.train_angle_metrics = angle_metrics.clone('train_angle_')
+        self.valid_angle_metrics = angle_metrics.clone('val_angle_')
+        self.test_angle_metrics = angle_metrics.clone('test_angle_')
 
         self.save_hyperparameters()
 
@@ -84,15 +98,17 @@ class LandmarksRegressor(pl.LightningModule):
         x, y = batch
         y_pred = self.forward(x)
 
-        is_object = y[:, 0]
+        is_object = y[:, 1]
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 0], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 2:], y[:, 1:],
-                                                     nn.functional.softplus(y_pred[:, 1])).mean(dim=1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 2], is_object))
+        loss += self.angle_loss(y_pred[:, 0], y[:, 0], nn.functional.softplus(y_pred[:, 1]))
+        loss += torch.mean(is_object * self.loss(y_pred[:, 4:], y[:, 2:],
+                                                 nn.functional.softplus(y_pred[:, 2])).mean(dim=1))
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
-        self.log_dict(self.train_classification_metrics(torch.sigmoid(y_pred[:, 0]), y[:, 0].long()))
-        self.log_dict(self.train_regression_metrics(y_pred[:, 2:], y[:, 1:]))
+        self.log_dict(self.train_classification_metrics(torch.sigmoid(y_pred[:, 2]), y[:, 1].long()))
+        self.log_dict(self.train_regression_metrics(y_pred[:, 4:], y[:, 2:]))
+        self.log_dict(self.train_angle_metrics(y_pred[:, 0], y[:, 0]))
 
         return loss
 
@@ -100,29 +116,33 @@ class LandmarksRegressor(pl.LightningModule):
         x, y = batch
         y_pred = self.forward(x)
 
-        is_object = y[:, 0]
+        is_object = y[:, 1]
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 0], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 2:], y[:, 1:],
-                                                     nn.functional.softplus(y_pred[:, 1])).mean(dim=1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 2], is_object))
+        loss += self.angle_loss(y_pred[:, 0], y[:, 0], nn.functional.softplus(y_pred[:, 1]))
+        loss += torch.mean(is_object * self.loss(y_pred[:, 4:], y[:, 2:],
+                                                 nn.functional.softplus(y_pred[:, 2])).mean(dim=1))
 
         self.log('val_loss', loss, on_step=False, on_epoch=True, sync_dist=True)
-        self.log_dict(self.valid_classification_metrics(torch.sigmoid(y_pred[:, 0]), y[:, 0].long()))
-        self.log_dict(self.valid_regression_metrics(y_pred[:, 2:], y[:, 1:]))
+        self.log_dict(self.valid_classification_metrics(torch.sigmoid(y_pred[:, 2]), y[:, 1].long()))
+        self.log_dict(self.valid_regression_metrics(y_pred[:, 4:], y[:, 2:]))
+        self.log_dict(self.valid_angle_metrics(y_pred[:, 0], y[:, 0]))
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> None:
         x, y = batch
         y_pred = self.forward(x)
 
-        is_object = y[:, 0]
+        is_object = y[:, 1]
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 0], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 2:], y[:, 1:],
-                                                     nn.functional.softplus(y_pred[:, 1])).mean(dim=1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, 2], is_object))
+        loss += self.angle_loss(y_pred[:, 0], y[:, 0], nn.functional.softplus(y_pred[:, 1]))
+        loss += torch.mean(is_object * self.loss(y_pred[:, 4:], y[:, 2:],
+                                                 nn.functional.softplus(y_pred[:, 2])).mean(dim=1))
 
         self.log('test_loss', loss, sync_dist=True)
-        self.log_dict(self.test_classification_metrics(torch.sigmoid(y_pred[:, 0]), y[:, 0].long()))
-        self.log_dict(self.test_regression_metrics(y_pred[:, 2:], y[:, 1:]))
+        self.log_dict(self.test_classification_metrics(torch.sigmoid(y_pred[:, 2]), y[:, 1].long()))
+        self.log_dict(self.test_regression_metrics(y_pred[:, 4:], y[:, 2:]))
+        self.log_dict(self.test_angle_metrics(y_pred[:, 0], y[:, 0]))
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=1e-4)

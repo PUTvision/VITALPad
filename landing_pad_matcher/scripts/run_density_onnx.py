@@ -9,8 +9,10 @@ session = onnxruntime.InferenceSession('density_estimator.onnx', options, provid
     ('TensorrtExecutionProvider', {
         'device_id': 0,
         'trt_fp16_enable': True,
-        'trt_engine_cache_enable': False,
-        'trt_engine_cache_path': '/tmp/keypoints_detector_cache'
+        'trt_int8_enable': True,
+        'trt_engine_cache_enable': True,
+        'trt_int8_calibration_table_name': 'calibration.flatbuffers',
+        'trt_engine_cache_path': 'density_estimator_cache'
     })
 ])
 

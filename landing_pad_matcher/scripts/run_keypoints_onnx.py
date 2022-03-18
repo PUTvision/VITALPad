@@ -9,16 +9,18 @@ session = onnxruntime.InferenceSession('keypoints_detector.onnx', options, provi
     ('TensorrtExecutionProvider', {
         'device_id': 0,
         'trt_fp16_enable': True,
+        'trt_int8_enable': True,
         'trt_engine_cache_enable': True,
-        'trt_engine_cache_path': '/tmp/keypoints_detector_cache'
+        'trt_int8_calibration_table_name': 'calibration.flatbuffers',
+        'trt_engine_cache_path': 'keypoints_detector_cache'
     })
 ])
 
 inputs = np.random.rand(1, 3, 128, 128).astype(np.float32)
-for _ in range(10):
+for _ in range(10000):
     session.run(None, {'input': inputs})
 
-iterations = 100
+iterations = 10000
 
 start = time.perf_counter()
 for _ in range(iterations):

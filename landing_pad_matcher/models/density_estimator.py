@@ -1,8 +1,7 @@
 import pytorch_lightning as pl
 import torch.nn.functional
 import torchmetrics
-from segmentation_models_pytorch import DeepLabV3Plus, Linknet
-from segmentation_models_pytorch.decoders.pyunet.model import PyUnet
+from segmentation_models_pytorch import DeepLabV3Plus
 from torch import nn
 from torchmetrics import MetricCollection
 

@@ -27,7 +27,7 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
 
     model = LandmarksRegressor(lr=lr)
 
-    # blocks_residuals = [1, 2, 2, 2, 4, 2]
+    blocks_residuals = [1, 2, 2, 2, 4, 2]
     # fusable = [('network.conv_stem', 'network.bn1', 'network.act1'),
     #            ('network.conv_head', 'network.act2')]
     # for block in range(6):
@@ -44,21 +44,20 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
     #                             f'network.blocks.{block}.{residual}.se.conv_expand',
     #                             f'network.blocks.{block}.{residual}.se.gate'))
 
-    # training_fusable = [('network.conv_head', 'network.act2')]
-    # for residual in range(blocks_residuals[5]):
-    #     training_fusable.append((f'network.blocks.5.{residual}.se.conv_reduce',
-    #                              f'network.blocks.5.{residual}.se.act1'))
+    training_fusable = [('network.conv_head', 'network.act2')]
+    for residual in range(blocks_residuals[5]):
+        training_fusable.append((f'network.blocks.5.{residual}.se.conv_reduce',
+                                 f'network.blocks.5.{residual}.se.act1'))
 
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)
     early_stop_callback = EarlyStopping(monitor='train_loss', patience=50)
     model_summary_callback = ModelSummary(max_depth=-1)
-    # quantization_callback = QuantizationAwareTraining(qconfig='qnnpack',
-    #                                                   modules_to_fuse=training_fusable)
+    quantization_callback = QuantizationAwareTraining(qconfig='fbgemm', modules_to_fuse=training_fusable)
     logger = pl.loggers.NeptuneLogger(project='Vision/LandingPadMatcher')
 
     trainer = pl.Trainer(
         logger=logger,
-        callbacks=[model_summary_callback, checkpoint_callback, early_stop_callback],
+        callbacks=[model_summary_callback, checkpoint_callback, early_stop_callback, quantization_callback],
         gpus=-1,
         strategy=DDPPlugin(
             find_unused_parameters=False,
@@ -66,7 +65,7 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
             static_graph=True
         ),
         sync_batchnorm=True,
-        precision=16,
+        precision=32,
         max_epochs=epochs,
         benchmark=True,
         accumulate_grad_batches=1

@@ -65,7 +65,8 @@ class LandmarksRegressor(pl.LightningModule):
         ])
         regression_metrics = MetricCollection([
             torchmetrics.MeanAbsoluteError(),
-            torchmetrics.MeanSquaredError()
+            torchmetrics.MeanAbsolutePercentageError(),
+            torchmetrics.MeanSquaredError(),
         ])
 
         self.train_classification_metrics = classification_metrics.clone('train_')

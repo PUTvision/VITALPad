@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import torch.utils
 import torch.utils.data
-from albumentations import Compose, Affine
+from albumentations import Compose, Affine, SmallestMaxSize, RandomCrop
 from albumentations.augmentations.transforms import (
     ToFloat, Flip, RandomShadow, MotionBlur, ColorJitter, RandomGamma, RandomSunFlare, ISONoise
 )
@@ -19,6 +19,8 @@ class DensityDataset(torch.utils.data.Dataset):
         self._augment = augment
 
         self._augmentations = Compose([
+            SmallestMaxSize(max_size=480, interpolation=cv2.INTER_AREA),
+            RandomCrop(height=480, width=640),
             RandomGamma(gamma_limit=(80, 120)),
             ColorJitter(brightness=0.2, contrast=0.2, hue=0.1, saturation=0.5),
             RandomSunFlare(),
@@ -31,6 +33,8 @@ class DensityDataset(torch.utils.data.Dataset):
             ToTensorV2()
         ])
         self._transforms = Compose([
+            SmallestMaxSize(max_size=480, interpolation=cv2.INTER_AREA),
+            RandomCrop(height=480, width=640),
             ToFloat(max_value=255.0),
             ToTensorV2()
         ])

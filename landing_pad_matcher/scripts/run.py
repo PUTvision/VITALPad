@@ -10,9 +10,8 @@ from landing_pad_matcher.models.landmarks_regressor import LandmarksRegressor
 
 torch.set_grad_enabled(False)
 
-model = LandmarksRegressor.load_from_checkpoint('../keypoints_detector.ckpt', strict=False)
-model.eval()
-dataset = LandmarksDataset(image_path=Path('../data/pad.png'), num_samples=100)
+model = LandmarksRegressor.load_from_checkpoint('/home/rivi/Models/keypoints_detector.ckpt', strict=False).eval()
+dataset = LandmarksDataset(image_path=Path('../data/pad.png'), textures_path=Path('../data/textures'), num_samples=100)
 
 stds = []
 maes = []

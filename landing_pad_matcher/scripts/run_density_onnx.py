@@ -17,10 +17,10 @@ session = onnxruntime.InferenceSession('density_estimator.onnx', options, provid
 ])
 
 inputs = np.random.rand(1, 3, 480, 640).astype(np.float32)
-for _ in range(10):
+for _ in range(1000):
     session.run(None, {'input': inputs})
 
-iterations = 100
+iterations = 1000
 
 start = time.perf_counter()
 for _ in range(iterations):

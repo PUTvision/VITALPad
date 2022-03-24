@@ -10,52 +10,6 @@ class LandmarksRegressor(pl.LightningModule):
     def __init__(self, **kwargs):
         super().__init__()
 
-        # self.network = nn.Sequential(
-        #     nn.Conv2d(in_channels=3, out_channels=32, kernel_size=(3, 3), padding=1, stride=(2, 2), bias=False),
-        #     nn.BatchNorm2d(num_features=32),
-        #     nn.ReLU(inplace=True),
-        #
-        #     nn.Conv2d(in_channels=32, out_channels=32, kernel_size=(3, 3), groups=32, padding=1, stride=(2, 2), bias=False),
-        #     nn.BatchNorm2d(num_features=32),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(1, 1), bias=False),
-        #     nn.BatchNorm2d(num_features=64),
-        #
-        #     nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), groups=64, padding=1, stride=(2, 2), bias=False),
-        #     nn.BatchNorm2d(num_features=64),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(in_channels=64, out_channels=128, kernel_size=(1, 1), bias=False),
-        #     nn.BatchNorm2d(num_features=128),
-        #
-        #     nn.Conv2d(in_channels=128, out_channels=128, kernel_size=(3, 3), groups=128, padding=1, stride=(2, 2), bias=False),
-        #     nn.BatchNorm2d(num_features=128),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(in_channels=128, out_channels=256, kernel_size=(1, 1), bias=False),
-        #     nn.BatchNorm2d(num_features=256),
-        #
-        #     nn.Conv2d(in_channels=256, out_channels=256, kernel_size=(3, 3), groups=256, padding=1, stride=(2, 2), bias=False),
-        #     nn.BatchNorm2d(num_features=256),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(in_channels=256, out_channels=512, kernel_size=(1, 1), bias=False),
-        #     nn.BatchNorm2d(num_features=512),
-        #
-        #     nn.Conv2d(in_channels=512, out_channels=512, kernel_size=(3, 3), groups=512, padding=1, bias=False),
-        #     nn.BatchNorm2d(num_features=512),
-        #     nn.ReLU(inplace=True),
-        #
-        #     nn.AdaptiveAvgPool2d((1, 1)),
-        #
-        #     nn.Conv2d(in_channels=512, out_channels=8, kernel_size=(1, 1)),
-        #     nn.Flatten()
-        # )
-        # self.network = nn.Sequential(
-        #     EfficientNetLite('efficientnet_lite0'),
-        #
-        #     nn.AdaptiveAvgPool2d((1, 1)),
-        #
-        #     nn.Conv2d(in_channels=320, out_channels=8, kernel_size=(1, 1)),
-        #     nn.Flatten()
-        # )
         self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=10, act_layer=nn.ReLU)
 
         self.loss = nn.GaussianNLLLoss(reduction='none')

@@ -1,6 +1,7 @@
+import json
 import random
 from pathlib import Path
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Optional, List
 
 import cv2
 import numpy as np
@@ -9,41 +10,66 @@ import torch.utils.data
 from albumentations import Compose, Affine, KeypointParams, Perspective, Resize, RandomCrop, ImageOnlyTransform, \
     RandomScale
 from albumentations.augmentations.transforms import (
-    RandomGamma, ColorJitter, ToFloat, MotionBlur, ISONoise, RandomShadow, RandomSunFlare, Flip
+    RandomGamma, ColorJitter, ToFloat, MotionBlur, ISONoise, RandomShadow, Flip, JpegCompression
 )
 from albumentations.pytorch import ToTensorV2
 
 
 class LandmarksDataset(torch.utils.data.Dataset):
-    def __init__(self, image_path: Path, textures_path: Path, num_samples: int):
+    def __init__(self, image_path: Path, textures_path: Path, photos_path: Optional[Path], num_samples: int):
         self._image, self._keypoints = self._load_data(image_path)
         self._num_samples = num_samples
+        if photos_path is not None:
+            self._photos_paths, self._photos_labels = self._load_photos(photos_path)
+        else:
+            self._photos_paths, self._photos_labels = None, None
 
         self._augmentations = Compose([
+            JpegCompression(quality_lower=80),
+            RandomScale(scale_limit=(-0.98, -0.75), interpolation=cv2.INTER_AREA, p=0.75),
             Resize(height=141, width=141, interpolation=cv2.INTER_AREA),
-            RandomGamma(gamma_limit=(80, 120)),
-            ColorJitter(brightness=0.2, contrast=0.2, hue=0.1, saturation=0.5),
+            RandomGamma(gamma_limit=(70, 130)),
+            ColorJitter(brightness=0.8, contrast=0.5, hue=0.3, saturation=0.7),
             Affine(rotate=(-180, 180), translate_px=(-20, 20), scale=(0.4, 1.1), shear=(0.7, 1.3),
                    cval=(0, 0, 0), p=1.0, interpolation=cv2.INTER_AREA),
             RandomBackground(textures_path=textures_path),
             RandomShadow(),
             MotionBlur(),
-            Perspective(scale=(0.01, 0.05), pad_val=(120, 120, 120)),
+            Perspective(scale=(0.01, 0.05), pad_val=(0, 0, 0)),
             ISONoise(),
             RandomCrop(height=128, width=128),
             ToFloat(max_value=255.0),
             ToTensorV2()
         ], keypoint_params=KeypointParams(format='xy', remove_invisible=True))
+        self._photos_augmentations = Compose([
+            RandomGamma(gamma_limit=(70, 130)),
+            ColorJitter(brightness=0.2, contrast=0.2, hue=0.2, saturation=0.2),
+            Affine(rotate=(-180, 180), mode=cv2.BORDER_REPLICATE),
+            RandomShadow(),
+            MotionBlur(),
+            ISONoise(),
+            ToFloat(max_value=255.0),
+            ToTensorV2()
+        ], keypoint_params=KeypointParams(format='xy', remove_invisible=True))
 
     def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
-        image, keypoints = self._perform_augmentations(self._image, self._keypoints)
+        if self._photos_paths is not None and random.random() <= 0.1:
+            index = random.randrange(0, len(self._photos_paths))
+            image = cv2.cvtColor(cv2.imread(str(self._photos_paths[index])), cv2.COLOR_BGR2RGB)
+            keypoints = self._photos_labels[index]
+            image, keypoints = self._perform_augmentations(image, keypoints, self._photos_augmentations)
+        else:
+            image, keypoints = self._perform_augmentations(self._image, self._keypoints, self._augmentations)
+
         return image, keypoints
 
     def __len__(self) -> int:
         return self._num_samples
 
-    def _perform_augmentations(self, image: np.ndarray, keypoints: np.ndarray) -> Tuple[torch.Tensor, torch.Tensor]:
-        transformed = self._augmentations(image=image, keypoints=keypoints)
+    @staticmethod
+    def _perform_augmentations(image: np.ndarray, keypoints: np.ndarray,
+                               augmentations: Compose) -> Tuple[torch.Tensor, torch.Tensor]:
+        transformed = augmentations(image=image, keypoints=keypoints)
         image = transformed['image']
         keypoints = transformed['keypoints']
 
@@ -63,9 +89,22 @@ class LandmarksDataset(torch.utils.data.Dataset):
             [274.5, 82.5],
             [443.5, 367.5],
             [105.5, 367.5]
-        ])
+        ], dtype=np.float64)
 
         return image, keypoints
+
+    @staticmethod
+    def _load_photos(photos_path: Path) -> Tuple[List[Path], List[np.ndarray]]:
+        with (photos_path / 'keypoints.json').open() as file:
+            labels = json.load(file)
+
+        photos_paths = []
+        photos_labels = []
+        for photo_name, keypoints in labels.items():
+            photos_paths.append(photos_path / 'images' / photo_name)
+            photos_labels.append(np.array(keypoints, dtype=np.float64))
+
+        return photos_paths, photos_labels
 
 
 class RandomBackground(ImageOnlyTransform):
@@ -77,7 +116,7 @@ class RandomBackground(ImageOnlyTransform):
             for texture_path in textures_path.iterdir()
          ]
         self._augmentations = Compose([
-            RandomScale((0.15, 1.0), interpolation=cv2.INTER_AREA, p=1.0),
+            RandomScale((0.05, 1.0), interpolation=cv2.INTER_AREA, p=1.0),
             ColorJitter(),
             Flip(),
             RandomCrop(height=141, width=141)

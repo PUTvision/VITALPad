@@ -32,7 +32,7 @@ def evaluate(model_dir: Path, data_path: Path):
     np.random.seed(42)
     random.seed(42)
 
-    dataset = LandmarksDataset(data_path, 10000)
+    dataset = LandmarksDataset(data_path, data_path.parent / 'textures', 10000)
 
     classification_metrics = MetricCollection([
         torchmetrics.Accuracy(),

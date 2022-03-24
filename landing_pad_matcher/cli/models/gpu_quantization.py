@@ -1,4 +1,5 @@
 import os
+import random
 import shutil
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -6,7 +7,8 @@ from typing import Optional, Dict
 
 import click
 import numpy as np
-from onnxruntime.quantization import CalibrationDataReader, create_calibrator, write_calibration_table
+from onnxruntime.quantization import CalibrationDataReader, create_calibrator, write_calibration_table, \
+    CalibrationMethod
 
 from landing_pad_matcher.datamodules.density import DensityDataModule
 from landing_pad_matcher.datasets.density import DensityDataset
@@ -17,21 +19,20 @@ class DensityEstimatorDataReader(CalibrationDataReader):
     def __init__(self, data_path: Path):
         paths = DensityDataModule.get_paths(data_path)
         self._dataset = DensityDataset(paths)
-        self._iterations = min(len(self._dataset) - 1, 100)
+        self._iterations = 100
 
     def get_next(self) -> Optional[Dict[str, np.ndarray]]:
-        iteration = self._iterations
-        if iteration >= 0:
-            self._iterations -= 1
-            return {'input': self._dataset[iteration][0][None, ...].numpy()}
+        indices = random.sample(range(len(self._dataset)), k=self._iterations)
+        for index in indices:
+            return {'input': self._dataset[index][0][None, ...].numpy()}
 
         return None
 
 
 class LandingPadDataReader(CalibrationDataReader):
     def __init__(self, data_path: Path):
-        self._iterations = 100
-        self._dataset = LandmarksDataset(data_path, num_samples=self._iterations)
+        self._iterations = 1000
+        self._dataset = LandmarksDataset(data_path, data_path.parent / 'textures', num_samples=self._iterations)
 
     def get_next(self) -> Optional[Dict[str, np.ndarray]]:
         iteration = self._iterations
@@ -66,7 +67,8 @@ def export(model_type: str, model_path: Path, data_path: Path, output_dir: Path)
 
     # Generate INT8 calibration table
     with NamedTemporaryFile() as augmented_model_file:
-        calibrator = create_calibrator(str(model_path), [], augmented_model_path=augmented_model_file.name)
+        calibrator = create_calibrator(str(model_path), [], augmented_model_path=augmented_model_file.name,
+                                       calibrate_method=CalibrationMethod.MinMax)
         calibrator.set_execution_providers(['CUDAExecutionProvider'])
         calibrator.collect_data(data_reader)
 

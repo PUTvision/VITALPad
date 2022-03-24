@@ -48,7 +48,7 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
         accumulate_grad_batches=1
     )
     trainer.fit(model, datamodule=data_module)
-    trainer.test(ckpt_path='best', datamodule=data_module)
+    trainer.test(model, ckpt_path=checkpoint_callback.best_model_path, datamodule=data_module)
 
 
 if __name__ == '__main__':

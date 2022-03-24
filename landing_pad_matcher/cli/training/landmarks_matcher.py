@@ -15,16 +15,18 @@ from landing_pad_matcher.models.landmarks_regressor import LandmarksRegressor
 @click.command()
 @click.option('--data-path', type=click.Path(exists=True, path_type=Path), required=True)
 @click.option('--textures-path', type=click.Path(exists=True, file_okay=False, path_type=Path), required=True)
+@click.option('--photos-path', type=click.Path(exists=True, file_okay=False, path_type=Path))
 @click.option('--batch-size', type=int, default=256)
 @click.option('--validation-batch-size', type=int, default=256)
 @click.option('--epochs', type=int, default=1000)
 @click.option('--lr', type=float, default=1e-3)
 @click.option('--number-of-workers', type=int, default=os.getenv('WORKERS', 4))
-def train(data_path: Path, textures_path: Path, batch_size: int, validation_batch_size: int,
-          epochs: int, lr: float, number_of_workers: Optional[int]):
+def train(data_path: Path, textures_path: Path, photos_path: Optional[Path], batch_size: int,
+          validation_batch_size: int, epochs: int, lr: float, number_of_workers: Optional[int]):
     pl.seed_everything(42)
 
-    data_module = LandmarksDataModule(data_path, textures_path, batch_size, validation_batch_size, number_of_workers)
+    data_module = LandmarksDataModule(data_path, textures_path, batch_size, validation_batch_size, photos_path,
+                                      number_of_workers)
 
     model = LandmarksRegressor(lr=lr)
 
@@ -53,7 +55,7 @@ def train(data_path: Path, textures_path: Path, batch_size: int, validation_batc
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)
     early_stop_callback = EarlyStopping(monitor='train_loss', patience=50)
     model_summary_callback = ModelSummary(max_depth=-1)
-    # quantization_callback = QuantizationAwareTraining(qconfig='fbgemm', modules_to_fuse=training_fusable)
+    # quantization_callback = QuantizationAwareTraining(qconfig='fbgemm')
     logger = pl.loggers.NeptuneLogger(project='Vision/LandingPadMatcher')
 
     trainer = pl.Trainer(

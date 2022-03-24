@@ -10,11 +10,12 @@ from landing_pad_matcher.datasets.landmarks import LandmarksDataset
 
 class LandmarksDataModule(LightningDataModule):
     def __init__(self, data_path: Path, textures_path: Path, batch_size: int, validation_batch_size: int,
-                 number_of_workers: Optional[int] = mp.cpu_count()):
+                 photos_path: Optional[Path], number_of_workers: Optional[int] = mp.cpu_count()):
         super().__init__()
 
         self._data_path = data_path
         self._textures_path = textures_path
+        self._photos_path = photos_path
         self._batch_size = batch_size
         self._validation_batch_size = validation_batch_size
         self._number_of_workers = number_of_workers
@@ -23,8 +24,10 @@ class LandmarksDataModule(LightningDataModule):
         self.valid_dataset = None
 
     def setup(self, stage: Optional[str] = None):
-        self.train_dataset = LandmarksDataset(self._data_path, self._textures_path, num_samples=500000)
-        self.valid_dataset = LandmarksDataset(self._data_path, self._textures_path, num_samples=50000)
+        self.train_dataset = LandmarksDataset(self._data_path, self._textures_path, self._photos_path,
+                                              num_samples=500000)
+        self.valid_dataset = LandmarksDataset(self._data_path, self._textures_path, self._photos_path,
+                                              num_samples=50000)
 
     def train_dataloader(self):
         return DataLoader(

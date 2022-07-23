@@ -14,7 +14,7 @@ from landing_pad_matcher.datasets.landmarks import LandmarksDataset
 class LandingPadDataReader(CalibrationDataReader):
     def __init__(self):
         self._iterations = 10000
-        self._dataset = LandmarksDataset(Path('../../data/pad.png'), num_samples=self._iterations)
+        self._dataset = LandmarksDataset(Path('../../../data/pad.png'), num_samples=self._iterations)
 
     def get_next(self) -> Optional[Dict[str, np.ndarray]]:
         iteration = self._iterations

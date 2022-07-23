@@ -1,0 +1,8 @@
+model_name: resnet18
+data_path: "data/pad.png"
+textures_path: "data/textures"
+batch_size: 32
+validation_batch_size: 32
+epochs: 100
+lr: 3e-4
+number_of_workers: 6

@@ -1,18 +1,28 @@
 import pytorch_lightning as pl
 import torch.nn.functional
 import torchmetrics
-from segmentation_models_pytorch import DeepLabV3Plus
+from segmentation_models_pytorch import LightUnet, DeepLabV3Plus, Unet
 from torch import nn
 from torchmetrics import MetricCollection
 
 
 class DensityEstimator(pl.LightningModule):
-    def __init__(self, **kwargs):
+    def __init__(self, model_name: str, encoder_name: str, lr: float, classes_weights: torch.Tensor, **kwargs):
         super().__init__()
 
-        self.network = DeepLabV3Plus('tu-lcnet_050', classes=3, encoder_kwargs={'act_layer': nn.ReLU6})
+        encoder_kwargs = {'act_layer': nn.ReLU6} if 'lcnet' in encoder_name else {}
 
-        self.loss = nn.CrossEntropyLoss()
+        match model_name:
+            case 'UNet':
+                self.network = Unet(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
+            case 'LightUNet':
+                self.network = LightUnet(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
+            case 'DeepLabV3Plus':
+                self.network = DeepLabV3Plus(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
+            case _:
+                raise RuntimeError(f'Unknown model: {model_name}')
+
+        self.loss = nn.CrossEntropyLoss(weight=classes_weights)
 
         metrics = MetricCollection([
             torchmetrics.MeanSquaredError(),

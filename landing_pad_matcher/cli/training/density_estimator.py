@@ -1,31 +1,26 @@
-import os
 from pathlib import Path
 from typing import Optional
 
-import click
+import hydra
 import pytorch_lightning as pl
 import pytorch_lightning.loggers
-from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, ModelSummary, QuantizationAwareTraining
-from pytorch_lightning.plugins import DDPPlugin
+from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, ModelSummary
+from pytorch_lightning.strategies import DDPStrategy
 
 from landing_pad_matcher.datamodules.density import DensityDataModule
 from landing_pad_matcher.models.density_estimator import DensityEstimator
 
 
-@click.command()
-@click.option('--data-path', type=click.Path(exists=True, path_type=Path), required=True)
-@click.option('--batch-size', type=int, default=256)
-@click.option('--validation-batch-size', type=int, default=256)
-@click.option('--epochs', type=int, default=1000)
-@click.option('--lr', type=float, default=1e-3)
-@click.option('--number-of-workers', type=int, default=os.getenv('WORKERS', 4))
-def train(data_path: Path, batch_size: int, validation_batch_size: int,
+def train(model_name: str, encoder_name: str, data_path: str, batch_size: int, validation_batch_size: int,
           epochs: int, lr: float, number_of_workers: Optional[int]):
     pl.seed_everything(42)
 
+    data_path = Path(hydra.utils.to_absolute_path(data_path))
     data_module = DensityDataModule(data_path, batch_size, validation_batch_size, number_of_workers)
 
-    model = DensityEstimator(lr=lr)
+    # classes_weights = data_module.compute_class_weights()
+    classes_weights = None
+    model = DensityEstimator(model_name=model_name, encoder_name=encoder_name, lr=lr, classes_weights=classes_weights)
 
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)
     early_stop_callback = EarlyStopping(monitor='train_loss', patience=50)
@@ -36,7 +31,7 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
         logger=logger,
         callbacks=[model_summary_callback, checkpoint_callback, early_stop_callback],
         gpus=-1,
-        strategy=DDPPlugin(
+        strategy=DDPStrategy(
             find_unused_parameters=False,
             gradient_as_bucket_view=True,
             static_graph=True
@@ -50,6 +45,4 @@ def train(data_path: Path, batch_size: int, validation_batch_size: int,
     trainer.fit(model, datamodule=data_module)
     trainer.test(model, ckpt_path=checkpoint_callback.best_model_path, datamodule=data_module)
 
-
-if __name__ == '__main__':
-    train()
+    logger.experiment.stop()

@@ -12,7 +12,7 @@ class RotationEstimator(pl.LightningModule):
     def __init__(self, **kwargs):
         super().__init__()
 
-        self.network = timm.create_model('lcnet_050', pretrained=True, num_classes=1, act_layer=nn.ReLU6)
+        self.network = timm.create_model('tf_mobilenetv3_small_minimal_100', pretrained=True, num_classes=1)
 
         self.loss = nn.MSELoss()
 

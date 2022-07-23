@@ -16,7 +16,7 @@ from landing_pad_matcher.datasets.density import DensityDataset
 def evaluate(model_dir: Path, data_path: Path):
     options = onnxruntime.SessionOptions()
     options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
-    session = onnxruntime.InferenceSession(str(model_dir / 'density_estimator.onnx'), options, providers=[
+    session = onnxruntime.InferenceSession(str(model_dir / 'density_estimator.yaml.onnx'), options, providers=[
         ('TensorrtExecutionProvider', {
             'device_id': 0,
             'trt_fp16_enable': True,

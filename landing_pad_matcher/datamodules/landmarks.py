@@ -25,9 +25,9 @@ class LandmarksDataModule(LightningDataModule):
 
     def setup(self, stage: Optional[str] = None):
         self.train_dataset = LandmarksDataset(self._data_path, self._textures_path, self._photos_path,
-                                              num_samples=500000)
-        self.valid_dataset = LandmarksDataset(self._data_path, self._textures_path, self._photos_path,
                                               num_samples=50000)
+        self.valid_dataset = LandmarksDataset(self._data_path, self._textures_path, self._photos_path,
+                                              num_samples=10000)
 
     def train_dataloader(self):
         return DataLoader(

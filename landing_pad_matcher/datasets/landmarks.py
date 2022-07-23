@@ -10,7 +10,7 @@ import torch.utils.data
 from albumentations import Compose, Affine, KeypointParams, Perspective, Resize, RandomCrop, ImageOnlyTransform, \
     RandomScale
 from albumentations.augmentations.transforms import (
-    RandomGamma, ColorJitter, ToFloat, MotionBlur, ISONoise, RandomShadow, Flip, JpegCompression
+    RandomGamma, ColorJitter, ToFloat, MotionBlur, ISONoise, RandomShadow, Flip, ImageCompression
 )
 from albumentations.pytorch import ToTensorV2
 
@@ -25,7 +25,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
             self._photos_paths, self._photos_labels = None, None
 
         self._augmentations = Compose([
-            JpegCompression(quality_lower=80),
+            ImageCompression(quality_lower=80),
             RandomScale(scale_limit=(-0.98, -0.75), interpolation=cv2.INTER_AREA, p=0.75),
             Resize(height=141, width=141, interpolation=cv2.INTER_AREA),
             RandomGamma(gamma_limit=(70, 130)),
@@ -40,7 +40,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
             RandomCrop(height=128, width=128),
             ToFloat(max_value=255.0),
             ToTensorV2()
-        ], keypoint_params=KeypointParams(format='xy', remove_invisible=True))
+        ], keypoint_params=KeypointParams(format='xy', remove_invisible=False))
         self._photos_augmentations = Compose([
             RandomGamma(gamma_limit=(70, 130)),
             ColorJitter(brightness=0.2, contrast=0.2, hue=0.2, saturation=0.2),
@@ -50,35 +50,36 @@ class LandmarksDataset(torch.utils.data.Dataset):
             ISONoise(),
             ToFloat(max_value=255.0),
             ToTensorV2()
-        ], keypoint_params=KeypointParams(format='xy', remove_invisible=True))
+        ], keypoint_params=KeypointParams(format='xy', remove_invisible=False))
 
-    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, index: int) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         if self._photos_paths is not None and random.random() <= 0.1:
             index = random.randrange(0, len(self._photos_paths))
             image = cv2.cvtColor(cv2.imread(str(self._photos_paths[index])), cv2.COLOR_BGR2RGB)
             keypoints = self._photos_labels[index]
-            image, keypoints = self._perform_augmentations(image, keypoints, self._photos_augmentations)
+            image, is_object, keypoints = self._perform_augmentations(image, keypoints, self._photos_augmentations)
         else:
-            image, keypoints = self._perform_augmentations(self._image, self._keypoints, self._augmentations)
+            image, is_object, keypoints = self._perform_augmentations(self._image, self._keypoints, self._augmentations)
 
-        return image, keypoints
+        return image, is_object, keypoints
 
     def __len__(self) -> int:
         return self._num_samples
 
     @staticmethod
     def _perform_augmentations(image: np.ndarray, keypoints: np.ndarray,
-                               augmentations: Compose) -> Tuple[torch.Tensor, torch.Tensor]:
+                               augmentations: Compose) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         transformed = augmentations(image=image, keypoints=keypoints)
         image = transformed['image']
         keypoints = transformed['keypoints']
 
-        targets = torch.zeros(9)
-        if len(keypoints) == 4:
-            targets[0] = 1
-            targets[1:] = torch.tensor(keypoints).flatten() / 128
+        is_object = torch.zeros(8)
+        for i, (x, y) in enumerate(keypoints):
+            is_object[i] = 1 if 0 <= x <= 128 and 0 <= y <= 128 else 0
 
-        return image, targets
+        targets = torch.tensor(keypoints) / 128
+
+        return image, is_object, targets
 
     @staticmethod
     def _load_data(image_path: Path) -> Tuple[np.ndarray, np.ndarray]:
@@ -86,6 +87,10 @@ class LandmarksDataset(torch.utils.data.Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         keypoints = np.array([
             [274.5, 274.5],
+            [248, 263],
+            [301, 263],
+            [301, 283],
+            [248, 283],
             [274.5, 82.5],
             [443.5, 367.5],
             [105.5, 367.5]

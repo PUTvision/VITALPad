@@ -21,7 +21,7 @@ class LandmarksRegressorWrapper(nn.Module):
 
     def forward(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         x = self.network(x)
-        return self.sigmoid(x[:, 0]), self.softplus(x[:, 1]), x[:, 2:]
+        return self.sigmoid(x[:, :8]), self.softplus(x[:, 8:16]), x[:, 16:]
 
 
 class DensityEstimatorWrapper(nn.Module):
@@ -47,7 +47,7 @@ def export(keypoints_detector_path: Path, density_estimator_path: Path, output_d
     model = LandmarksRegressorWrapper(keypoints_detector_path).eval()
     inputs = torch.rand(1, 3, 128, 128)
     torch.onnx.export(model, inputs, output_dir / 'keypoints_detector.onnx', opset_version=15, input_names=['input'],
-                      output_names=['confidence', 'std', 'coords'])
+                      output_names=['confidence', 'var', 'coords'])
 
     model = DensityEstimatorWrapper(density_estimator_path).eval()
     inputs = torch.rand(1, 3, 480, 640)

@@ -5,9 +5,9 @@ import cv2
 import numpy as np
 import torch.utils
 import torch.utils.data
-from albumentations import Compose, Affine, SmallestMaxSize, RandomCrop
+from albumentations import Compose, Affine, SmallestMaxSize, RandomCrop, CenterCrop
 from albumentations.augmentations.transforms import (
-    ToFloat, Flip, RandomShadow, MotionBlur, ColorJitter, RandomGamma, RandomSunFlare, ISONoise
+    ToFloat, Flip, RandomShadow, MotionBlur, ColorJitter, RandomGamma, RandomSunFlare, ISONoise, PadIfNeeded
 )
 from albumentations.pytorch import ToTensorV2
 from scipy.ndimage import gaussian_filter
@@ -34,7 +34,7 @@ class DensityDataset(torch.utils.data.Dataset):
         ])
         self._transforms = Compose([
             SmallestMaxSize(max_size=480, interpolation=cv2.INTER_AREA),
-            RandomCrop(height=480, width=640),
+            CenterCrop(height=480, width=640),
             ToFloat(max_value=255.0),
             ToTensorV2()
         ])
@@ -61,8 +61,8 @@ class DensityDataset(torch.utils.data.Dataset):
     @torch.no_grad()
     def _transform_gt(original_gt: torch.Tensor) -> torch.Tensor:
         # The aim of the code below is to produce softmax-like output
-        gt = torch.ones(3, *original_gt.shape[:2], dtype=torch.float32)
-        for i, color in enumerate(((255, 0, 0), (0, 255, 0))):
+        gt = torch.ones(2, *original_gt.shape[:2], dtype=torch.float32)
+        for i, color in enumerate(((255, 0, 0),)):  # enumerate(((255, 0, 0), (0, 255, 0)))
             mask = torch.eq(original_gt, torch.tensor(color)).all(dim=-1).type(torch.float32)
             mask = torch.from_numpy(gaussian_filter(mask, sigma=(1, 1)))
             gt[i + 1] = mask
@@ -83,3 +83,4 @@ class DensityDataset(torch.utils.data.Dataset):
         gt_image = cv2.cvtColor(cv2.imread(str(gt_path)), cv2.COLOR_BGR2RGB)
 
         return rgb_image, gt_image
+

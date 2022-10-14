@@ -4,6 +4,7 @@ from typing import Optional
 import hydra
 import pytorch_lightning as pl
 import pytorch_lightning.loggers
+import torch
 from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping, ModelSummary
 from pytorch_lightning.strategies import DDPStrategy
 
@@ -19,7 +20,7 @@ def train(model_name: str, encoder_name: str, data_path: str, batch_size: int, v
     data_module = DensityDataModule(data_path, batch_size, validation_batch_size, number_of_workers)
 
     # classes_weights = data_module.compute_class_weights()
-    classes_weights = None
+    classes_weights = torch.tensor([0.3472, 67.1499, 9.5648], dtype=torch.float64)
     model = DensityEstimator(model_name=model_name, encoder_name=encoder_name, lr=lr, classes_weights=classes_weights)
 
     checkpoint_callback = ModelCheckpoint(filename='{epoch}-{val_loss:.5f}', monitor='val_loss', verbose=True)

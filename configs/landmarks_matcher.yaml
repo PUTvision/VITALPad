@@ -1,6 +1,7 @@
-model_name: resnet18
+model_name: resnet10t
 data_path: "data/pad.png"
 textures_path: "data/textures"
+photos_path: "data/photos"
 batch_size: 32
 validation_batch_size: 32
 epochs: 100

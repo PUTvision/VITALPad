@@ -45,6 +45,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
             RandomGamma(gamma_limit=(70, 130)),
             ColorJitter(brightness=0.2, contrast=0.2, hue=0.2, saturation=0.2),
             Affine(rotate=(-180, 180), mode=cv2.BORDER_REPLICATE),
+            Resize(height=128, width=128, interpolation=cv2.INTER_AREA),
             RandomShadow(),
             MotionBlur(),
             ISONoise(),
@@ -73,7 +74,7 @@ class LandmarksDataset(torch.utils.data.Dataset):
         image = transformed['image']
         keypoints = transformed['keypoints']
 
-        is_object = torch.zeros(8)
+        is_object = torch.zeros(4)
         for i, (x, y) in enumerate(keypoints):
             is_object[i] = 1 if 0 <= x <= 128 and 0 <= y <= 128 else 0
 
@@ -87,10 +88,6 @@ class LandmarksDataset(torch.utils.data.Dataset):
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         keypoints = np.array([
             [274.5, 274.5],
-            [248, 263],
-            [301, 263],
-            [301, 283],
-            [248, 283],
             [274.5, 82.5],
             [443.5, 367.5],
             [105.5, 367.5]
@@ -100,16 +97,18 @@ class LandmarksDataset(torch.utils.data.Dataset):
 
     @staticmethod
     def _load_photos(photos_path: Path) -> Tuple[List[Path], List[np.ndarray]]:
-        with (photos_path / 'keypoints.json').open() as file:
-            labels = json.load(file)
-
-        photos_paths = []
-        photos_labels = []
-        for photo_name, keypoints in labels.items():
-            photos_paths.append(photos_path / 'images' / photo_name)
-            photos_labels.append(np.array(keypoints, dtype=np.float64))
+        photos_paths = sorted([path for path in photos_path.iterdir() if path.suffix == '.jpg'])
+        lables_paths = sorted([path for path in photos_path.iterdir() if path.suffix == '.npy'])
+        photos_labels = [_read_labels(path) for path in lables_paths]
 
         return photos_paths, photos_labels
+
+
+def _read_labels(labels_path: Path) -> np.ndarray:
+    labels = np.load(labels_path)
+    labels = labels.astype(np.float64)
+
+    return labels
 
 
 class RandomBackground(ImageOnlyTransform):

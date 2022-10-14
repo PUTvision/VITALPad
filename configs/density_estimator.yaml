@@ -1,8 +1,8 @@
-model_name: DeepLabV3Plus
-encoder_name: tu-lcnet_050
+model_name: FOMO
+encoder_name: resnet10t
 data_path: "data/Landing"
 batch_size: 32
 validation_batch_size: 32
 epochs: 1000
-lr: 3e-4
-number_of_workers: 6
+lr: 2e-4
+number_of_workers: 8

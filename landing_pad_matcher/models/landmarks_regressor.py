@@ -13,7 +13,7 @@ class LandmarksRegressor(pl.LightningModule):
     def __init__(self, model_name: str, **kwargs):
         super().__init__()
 
-        self.network = timm.create_model(model_name, pretrained=True, num_classes=32)
+        self.network = timm.create_model(model_name, pretrained=True, num_classes=16)
 
         self.loss = nn.GaussianNLLLoss(reduction='none')
         # self.loss = BetaNLLLoss(beta=0.5)
@@ -44,49 +44,49 @@ class LandmarksRegressor(pl.LightningModule):
     def training_step(self, batch: torch.Tensor, batch_idx: int) -> torch.Tensor:
         x, is_object, y = batch
         y_pred = self.forward(x)
-        y_pred_var = nn.functional.softplus(y_pred[:, 8:16])
+        y_pred_var = nn.functional.softplus(y_pred[:, 4:8])
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :8], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var).mean(dim=-1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :4], is_object))
+        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 8:].view(-1, 4, 2), y, y_pred_var).mean(dim=-1))
         # loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var))
 
         self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
-        self.log_dict(self.train_classification_metrics(torch.sigmoid(y_pred[:, :8]), is_object.long()))
-        self.log_dict(self.train_regression_metrics(y_pred[:, 16:].view(-1, 8, 2), y))
+        self.log_dict(self.train_classification_metrics(torch.sigmoid(y_pred[:, :4]), is_object.long()), sync_dist=True)
+        self.log_dict(self.train_regression_metrics(y_pred[:, 8:].view(-1, 4, 2), y), sync_dist=True)
         self.log_dict(self.train_var_metrics(y_pred_var.sqrt(),
-                                             torch.abs(y_pred[:, 16:].view(-1, 8, 2) - y).mean(dim=-1)))
+                                             torch.abs(y_pred[:, 8:].view(-1, 4, 2) - y).mean(dim=-1)), sync_dist=True)
 
         return loss
 
     def validation_step(self, batch: torch.Tensor, batch_idx: int) -> None:
         x, is_object, y = batch
         y_pred = self.forward(x)
-        y_pred_var = nn.functional.softplus(y_pred[:, 8:16])
+        y_pred_var = nn.functional.softplus(y_pred[:, 4:8])
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :8], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var).mean(dim=-1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :4], is_object))
+        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 8:].view(-1, 4, 2), y, y_pred_var).mean(dim=-1))
         # loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var))
 
         self.log('val_loss', loss, on_step=False, on_epoch=True, sync_dist=True)
-        self.log_dict(self.valid_classification_metrics(torch.sigmoid(y_pred[:, :8]), is_object.long()))
-        self.log_dict(self.valid_regression_metrics(y_pred[:, 16:].view(-1, 8, 2), y))
+        self.log_dict(self.valid_classification_metrics(torch.sigmoid(y_pred[:, :4]), is_object.long()), sync_dist=True)
+        self.log_dict(self.valid_regression_metrics(y_pred[:, 8:].view(-1, 4, 2), y), sync_dist=True)
         self.log_dict(self.train_var_metrics(y_pred_var.sqrt(),
-                                             torch.abs(y_pred[:, 16:].view(-1, 8, 2) - y).mean(dim=-1)))
+                                             torch.abs(y_pred[:, 8:].view(-1, 4, 2) - y).mean(dim=-1)), sync_dist=True)
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> None:
         x, is_object, y = batch
         y_pred = self.forward(x)
-        y_pred_var = nn.functional.softplus(y_pred[:, 8:16])
+        y_pred_var = nn.functional.softplus(y_pred[:, 4:8])
 
-        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :8], is_object))
-        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var).mean(dim=-1))
+        loss = torch.mean(torch.binary_cross_entropy_with_logits(y_pred[:, :4], is_object))
+        loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 8:].view(-1, 4, 2), y, y_pred_var).mean(dim=-1))
         # loss += 5 * torch.mean(is_object * self.loss(y_pred[:, 16:].view(-1, 8, 2), y, y_pred_var))
 
         self.log('test_loss', loss, sync_dist=True)
-        self.log_dict(self.test_classification_metrics(torch.sigmoid(y_pred[:, :8]), is_object.long()))
-        self.log_dict(self.test_regression_metrics(y_pred[:, 16:].view(-1, 8, 2), y))
+        self.log_dict(self.test_classification_metrics(torch.sigmoid(y_pred[:, :4]), is_object.long()), sync_dist=True)
+        self.log_dict(self.test_regression_metrics(y_pred[:, 8:].view(-1, 4, 2), y), sync_dist=True)
         self.log_dict(self.train_var_metrics(y_pred_var.sqrt(),
-                                             torch.abs(y_pred[:, 16:].view(-1, 8, 2) - y).mean(dim=-1)))
+                                             torch.abs(y_pred[:, 8:].view(-1, 4, 2) - y).mean(dim=-1)), sync_dist=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=1e-4)

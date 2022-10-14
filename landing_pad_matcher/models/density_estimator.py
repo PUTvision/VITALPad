@@ -1,9 +1,11 @@
 import pytorch_lightning as pl
 import torch.nn.functional
 import torchmetrics
-from segmentation_models_pytorch import LightUnet, DeepLabV3Plus, Unet
+from segmentation_models_pytorch import DeepLabV3Plus, Unet
 from torch import nn
 from torchmetrics import MetricCollection
+
+from landing_pad_matcher.models.architectures.fomo import FOMO
 
 
 class DensityEstimator(pl.LightningModule):
@@ -15,10 +17,10 @@ class DensityEstimator(pl.LightningModule):
         match model_name:
             case 'UNet':
                 self.network = Unet(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
-            case 'LightUNet':
-                self.network = LightUnet(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
             case 'DeepLabV3Plus':
                 self.network = DeepLabV3Plus(encoder_name, classes=2, encoder_kwargs=encoder_kwargs)
+            case 'FOMO':
+                self.network = FOMO(encoder_name, classes=3, encoder_kwargs=encoder_kwargs)
             case _:
                 raise RuntimeError(f'Unknown model: {model_name}')
 
@@ -43,7 +45,7 @@ class DensityEstimator(pl.LightningModule):
         y_pred = self.forward(x)
         loss = self.loss(y_pred, y)
         self.log('train_loss', loss, on_step=True, on_epoch=True, sync_dist=True)
-        self.log_dict(self.train_metrics(torch.softmax(y_pred, dim=1), y))
+        self.log_dict(self.train_metrics(torch.softmax(y_pred, dim=1), y), sync_dist=True)
 
         return loss
 
@@ -52,14 +54,14 @@ class DensityEstimator(pl.LightningModule):
         y_pred = self.forward(x)
         loss = self.loss(y_pred, y)
         self.log('val_loss', loss, on_step=False, on_epoch=True, sync_dist=True)
-        self.log_dict(self.valid_metrics(torch.softmax(y_pred, dim=1), y))
+        self.log_dict(self.valid_metrics(torch.softmax(y_pred, dim=1), y), sync_dist=True)
 
     def test_step(self, batch: torch.Tensor, batch_idx: int) -> None:
         x, y = batch
         y_pred = self.forward(x)
         loss = self.loss(y_pred, y)
         self.log('test_loss', loss, sync_dist=True)
-        self.log_dict(self.test_metrics(torch.softmax(y_pred, dim=1), y), on_step=True)
+        self.log_dict(self.test_metrics(torch.softmax(y_pred, dim=1), y), sync_dist=True)
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.hparams.lr, weight_decay=1e-4)

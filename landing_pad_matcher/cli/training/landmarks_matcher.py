@@ -13,11 +13,12 @@ from landing_pad_matcher.models.landmarks_regressor import LandmarksRegressor
 
 def train(data_path: str, textures_path: str, model_name: str, batch_size: int,
           validation_batch_size: int, epochs: int, lr: float, number_of_workers: int,
-          photos_path: Optional[Path] = None):
+          photos_path: Optional[str] = None):
     pl.seed_everything(42)
 
     data_path = Path(hydra.utils.to_absolute_path(data_path))
     textures_path = Path(hydra.utils.to_absolute_path(textures_path))
+    photos_path = Path(hydra.utils.to_absolute_path(photos_path))
     data_module = LandmarksDataModule(data_path, textures_path, batch_size, validation_batch_size, photos_path,
                                       number_of_workers)
 

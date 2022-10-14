@@ -61,10 +61,10 @@ class DensityDataset(torch.utils.data.Dataset):
     @torch.no_grad()
     def _transform_gt(original_gt: torch.Tensor) -> torch.Tensor:
         # The aim of the code below is to produce softmax-like output
-        gt = torch.ones(2, *original_gt.shape[:2], dtype=torch.float32)
-        for i, color in enumerate(((255, 0, 0),)):  # enumerate(((255, 0, 0), (0, 255, 0)))
+        gt = torch.ones(3, *original_gt.shape[:2], dtype=torch.float32)
+        for i, color in enumerate(((255, 0, 0), (0, 255, 0))):  # enumerate(((255, 0, 0), (0, 255, 0)))
             mask = torch.eq(original_gt, torch.tensor(color)).all(dim=-1).type(torch.float32)
-            mask = torch.from_numpy(gaussian_filter(mask, sigma=(1, 1)))
+            # mask = torch.from_numpy(gaussian_filter(mask, sigma=(1, 1)))
             gt[i + 1] = mask
 
         # If people and landing pad masks overlap, divide them so that their sum is equal to 1
